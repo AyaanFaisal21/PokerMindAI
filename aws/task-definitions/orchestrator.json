@@ -1,0 +1,46 @@
+{
+  "family": "pokermind-orchestrator",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/pokermind-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/pokermind-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "orchestrator",
+      "image": "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/pokermind-orchestrator:latest",
+      "portMappings": [
+        { "containerPort": 8000, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "LLM_MODEL", "value": "claude-haiku-4-5-20251001" },
+        { "name": "REDIS_URL", "value": "redis://pokermind-redis.internal:6379" },
+        { "name": "STRATEGIST_URL", "value": "http://pokermind-strategist.internal:8001" },
+        { "name": "HISTORIAN_URL", "value": "http://pokermind-historian.internal:8002" },
+        { "name": "HUMANIZER_URL", "value": "http://pokermind-humanizer.internal:8003" }
+      ],
+      "secrets": [
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:pokermind/anthropic-api-key"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/pokermind/orchestrator",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
